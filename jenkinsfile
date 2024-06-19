@@ -1,0 +1,78 @@
+pipeline {
+    agent any 
+
+    environment {
+        MONGODB_URI = credentials('LOG_SERVICE_MONGODB_URI')
+        DISCORD_WEBHOOK_URL = credentials('DISCORD_WEBHOOK_URL')
+    }
+
+    stages {
+        stage('clear existing image and container') {
+            steps {
+                script {
+                    sh "echo deleting existing image and container"
+                    try {
+                        sh "docker kill log-service1"
+                        sh "docker kill log-service2"
+                        sh "docker rm log-service1"
+                        sh "docker rm log-service2"
+                        sh "docker rmi log-service"
+                    } catch (Exception e) {
+                        echo "No existing image or container to remove"
+                    }
+                }
+            }
+            post {
+                failure {
+                    script {
+                        def committerName = sh(script: 'git log -1 --pretty=format:"%cn"', returnStdout: true).trim()
+                        discordSend description: "Failed to clear existing image and container. Committer: ${committerName}", link: env.BUILD_URL, result: currentBuild.currentResult, title: JOB_NAME, webhookURL: "${DISCORD_WEBHOOK_URL}"
+                    }
+                }
+            }
+        }
+        stage('build image') {
+            steps {
+                script {
+                    echo "building image with mongo ${MONGODB_URI}"
+                    sh "touch .env && echo DATABASE_URL=${MONGODB_URI} >> .env"
+                    sh "docker build -t log-service ."
+                }
+            }
+            post {
+                failure {
+                    script {
+                        def committerName = sh(script: 'git log -1 --pretty=format:"%cn"', returnStdout: true).trim()
+                        discordSend description: "Failed to build image. Committer: ${committerName}", link: env.BUILD_URL, result: currentBuild.currentResult, title: JOB_NAME, webhookURL: "${DISCORD_WEBHOOK_URL}"
+                    }
+                }
+            }
+        }
+        stage('deploy') {
+            steps {
+                script {
+                    sh "docker run -d --name log-service1 --network elective_network --restart unless-stopped log-service"
+                    sh "docker run -d --name log-service2 --network elective_network --restart unless-stopped log-service"
+                }
+            }
+            post {
+                success {
+                    script {
+                        def committerName = sh(script: 'git log -1 --pretty=format:"%cn"', returnStdout: true).trim()
+                        discordSend description: "Deployed image successfully. Committer: ${committerName}", link: env.BUILD_URL, result: currentBuild.currentResult, title: JOB_NAME, webhookURL: "${DISCORD_WEBHOOK_URL}"
+                    }
+                }
+                failure {
+                    script {
+                        def committerName = sh(script: 'git log -1 --pretty=format:"%cn"', returnStdout: true).trim()
+                        discordSend description: "Failed to deploy image. Committer: ${committerName}", link: env.BUILD_URL, result: currentBuild.currentResult, title: JOB_NAME, webhookURL: "${DISCORD_WEBHOOK_URL}"
+                    }
+                }
+            }
+        }
+    }
+}
+
+def dockerExec(command) {
+    sh "docker exec ${CONTAINER_NAME} ${command}"
+}
