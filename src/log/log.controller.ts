@@ -34,20 +34,26 @@ export class LogController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'Get logs with optional filters' })
+  @ApiOperation({ summary: 'Get logs with optional filters and pagination' })
   @ApiCreatedResponse({ type: LogEntity, isArray: true })
   @ApiQuery({ name: 'id_log', required: false, type: String })
   @ApiQuery({ name: 'service', required: false, type: String })
   @ApiQuery({ name: 'level', required: false, type: String })
+  @ApiQuery({ name: 'page', required: false, type: Number, example: 1 })
+  @ApiQuery({ name: 'limit', required: false, type: Number, example: 10 })
   findAll(
     @Query('id_log') idLog: string,
     @Query('service') service: string,
     @Query('level') level: string,
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
   ) {
     return this.logService.findMany({
       id_log: idLog,
       service: service,
       level: level,
+      page,
+      limit,
     });
   }
 

@@ -6,27 +6,34 @@ import { PrismaService } from '../prisma.service';
 @Injectable()
 export class LogService {
   constructor(private prisma: PrismaService) {}
+
   create(createLogDto: CreateLogDto) {
     return this.prisma.log.create({
       data: createLogDto,
     });
   }
 
-  findMany(params: { id_log: string; service: string; level: string }) {
+  findMany(params: {
+    id_log: string;
+    service: string;
+    level: string;
+    page: number;
+    limit: number;
+  }) {
+    const { id_log, service, level, page, limit } = params;
+    const skip = (page - 1) * limit;
+    const take = +limit;
+
     return this.prisma.log.findMany({
       where: {
         AND: [
-          {
-            id_log: params.id_log === '' ? undefined : params.id_log,
-          },
-          {
-            service: params.service === '' ? undefined : params.service,
-          },
-          {
-            level: params.level === '' ? undefined : params.level,
-          },
+          { id_log: id_log === '' ? undefined : id_log },
+          { service: service === '' ? undefined : service },
+          { level: level === '' ? undefined : level },
         ],
       },
+      skip,
+      take,
     });
   }
 
