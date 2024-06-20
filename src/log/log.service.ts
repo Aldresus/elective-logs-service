@@ -37,6 +37,15 @@ export class LogService {
     });
   }
 
+  count(params: { service: string }) {
+    const { service } = params;
+    return this.prisma.log.count({
+      where: {
+        service: service === '' ? undefined : service,
+      },
+    });
+  }
+
   update(id_log: string, updateLogDto: UpdateLogDto) {
     return this.prisma.log.update({
       where: {

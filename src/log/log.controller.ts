@@ -57,6 +57,16 @@ export class LogController {
     });
   }
 
+  @Get('count')
+  @ApiOperation({ summary: 'Get logs with optional filters and pagination' })
+  @ApiCreatedResponse({ type: LogEntity, isArray: true })
+  @ApiQuery({ name: 'service', required: false, type: String })
+  count(@Query('service') service: string) {
+    return this.logService.count({
+      service: service,
+    });
+  }
+
   @Patch(':id')
   @ApiOperation({ summary: 'Update log with ID' })
   @ApiCreatedResponse({ type: LogEntity })
